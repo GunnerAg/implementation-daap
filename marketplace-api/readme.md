@@ -10,8 +10,22 @@ npm install
 ```
 
 ## Uso:
+ Crea un nuevo archivo .env en la raiz de tu directorio y añade tu mnemonic con el nombre: MNEMONIC.
 
- Ejecuta el siguiente comando:
+ Posteriormente debes desplegar los contratos, para ello necesitas test ETH de algún faucet.
+
+ Desplegar los contratos en rinkeby:
+```
+npm run deploy:rinkeby
+```
+
+ Desplegar los contratos en goerli:
+```
+npm run deploy:goerli
+```
+
+
+ Ejecutar la API:
 ```
 npm run start
 ```

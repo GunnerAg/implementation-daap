@@ -1,8 +1,8 @@
-import { Router } from 'express'
-import orderRoute from './routes/order.route'
-import tokenRoute from './routes/token.route'
+import { Router } from "express";
+import orderRoute from "./routes/order.route";
+import tokenRoute from "./routes/token.route";
 
-/** */
+
 export default (): Router => {
   const app = Router()
 

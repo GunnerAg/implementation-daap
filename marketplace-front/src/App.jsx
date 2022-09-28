@@ -1,23 +1,24 @@
 import React from "react";
-import Create from "./components/Create";
-import Profile from "./components/Profile";
+import { Routes, Route } from "react-router-dom";
 import Intro from "./components/Intro";
-import MarketPlace from "./components/MarketPlace";
-import ScrollToTop from "./components/ScrollToTop";
-import { Route, Routes } from "react-router-dom";
-import Home from "./components/Home";
+import Home from "./components/home";
+import Footer from "./components/footer";
+import Create from "./components/create";
+import Marketplace from "./components/marketplace";
+import Profile from "./components/profile";
+
 
 export default function App() {
   return (
     <div id="App">
-      <ScrollToTop />
       <Intro />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/create" element={<Create />} />
         <Route path="/profile" element={<Profile />} />
-        <Route path="/marketplace" element={<MarketPlace />} />
+        <Route path="/marketplace" element={<Marketplace />} />
       </Routes>
+      <Footer />
     </div>
   );
 }

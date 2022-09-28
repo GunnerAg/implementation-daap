@@ -1,16 +1,17 @@
-/* eslint-disable max-len */
 import mysql from 'mysql'
 import { appConfig } from '../config'
 
-export default (): Promise<boolean> => {
+
+  export default (): Promise <boolean> => {
   return new Promise((resolve, reject) => {
     const session = mysql.createConnection(appConfig.DATABASE)
 
-    session.connect(err => {
+   session.connect( err=> {
       if (err) {
-        reject(err)
-      } else {
-        resolve(true)
+        reject(err);
+      }
+      else {
+        resolve(true);
       }
     })
 

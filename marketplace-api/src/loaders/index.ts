@@ -1,17 +1,14 @@
 import express from 'express'
-import expressLoader from './express.loader'
+import expressLoadres from './express.loadres'
 import mysqlLoader from './mysql.loader'
 
-interface IExpressLoader {
-  expressApp: express.Router;
+interface IExpress {
+  app: express.Router
 }
 
-/**
- * Load resources
- */
-export default async ({ expressApp }: IExpressLoader): Promise<any> => {
+export default async({ app }: IExpress): Promise<any> => {
   await mysqlLoader() ? console.info('✅ Connected to database') : console.info('🚫 Database error connection')
 
-  expressLoader({ app: expressApp })
-  console.info('✅ Express loaded')
+  expressLoadres({app: app})
+  console.info('✅ Express loaded!') 
 }

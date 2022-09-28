@@ -1,36 +1,17 @@
 import Web3 from "web3";
 
-window.web3 = new Web3(window.ethereum);
-
-export const metamaskInstalled = () => {
-  if (typeof window.ethereum !== "undefined") {
-    return "MetaMask esta instalado";
-  } else return "Metamask no instalado";
-};
+if (typeof window.ethereum !== "undefined") {
+  console.log("MetaMask is installed!");
+  window.web3 = new Web3(window.ethereum);
+} else {
+  console.error("Metamask not installed.");
+}
 
 const networks = {
-  binance: {
-    id: "0x38",
-    chainName: "Binance Smart Chain",
-    tokenName: "BNB",
-    tokenSymbol: "BNB",
-    decimals: 18,
-    rpcList: ["https://bsc-dataseed.binance.org/"],
-    explorerList: ["https://bscscan.com/"],
-  },
-  binanceTestnet: {
-    id: "0x61",
-    chainName: "BSCT",
-    tokenName: "tBNB",
-    tokenSymbol: "Binance Chain Native Token",
-    decimals: 18,
-    rpcList: ["https://data-seed-prebsc-1-s1.binance.org:8545/"],
-    explorerList: ["https://bscscan.com/"],
-  },
   rinkeby: {
     id: "0x4",
     chainName: "Ethereum Rinkeby",
-    tokenName: "Rinkeby Ether",
+    tokenName: "Rinkeby ETH",
     tokenSymbol: "ETH",
     decimals: 18,
     rpcList: ["https://rinkeby.infura.io/v3/"],
@@ -38,21 +19,12 @@ const networks = {
   },
 };
 
-// NFT CONTRACT PROVIDER //
 export class NFT {
   constructor(contractData) {
     this.contractData = contractData;
     this.abi = contractData.abi;
     this.address = contractData.address;
     this.contract = new window.web3.eth.Contract(this.abi, this.address);
-  }
-
-  status() {
-    if (window.ethereum === undefined) {
-      return false;
-    } else {
-      return true;
-    }
   }
 
   async addNetwork(network) {
@@ -65,6 +37,7 @@ export class NFT {
       rpcList,
       explorerList,
     } = network;
+
     try {
       await window.ethereum.request({
         method: "wallet_switchEthereumChain",
@@ -74,14 +47,14 @@ export class NFT {
       if (error.code === 4902) {
         try {
           await window.ethereum.request({
-            method: "wallet_addEthereumChain",
+            method: "wallet_switchEthereumChain",
             params: [
               {
                 chainId: id,
                 chainName: chainName,
                 nativeCurrency: {
                   name: tokenName,
-                  symbol: tokenSymbol,
+                  Symbol: tokenSymbol,
                   decimals: decimals,
                 },
                 rpcUrls: rpcList,
@@ -90,10 +63,10 @@ export class NFT {
               },
             ],
           });
-        } catch (addError) {
+        } catch (addErr) {
           throw new Error(`Only ${chainName} should work`);
         }
-      } else throw new Error(`Web3 provider error.`);
+      } else throw new Error(`Web3 provider error`);
     }
   }
 
@@ -126,9 +99,9 @@ export class NFT {
 
   async tokenOfOwnerByIndex(index) {
     await this.addNetwork(networks.rinkeby);
+    const account = await this.getAccount();
 
     try {
-      const account = await this.getAccount();
       const tokenID = await this.contract.methods
         .tokenOfOwnerByIndex(account, index)
         .call();
@@ -138,20 +111,20 @@ export class NFT {
     }
   }
 
-  async tokenURI(id) {
-    await this.addNetwork(networks.rinkeby);
-    return await this.contract.methods.tokenURI(id).call();
-  }
-
   async fromWei(amount) {
-    // await test(chain);
     await this.addNetwork(networks.rinkeby);
     return Number(Web3.utils.fromWei(amount, "ether"));
   }
 
+  // EJECUCION BASADA EN EVENTOS, LOS USAMOS CON LOS WEBSOCKETS EN EL TEMA 6 PARA COMUNICAR SERVER Y CLIENTS. (MAS EN EL LINK)
+  // https://web3js.readthedocs.io/en/v1.2.11/web3-eth-contract.html#events,
+  // En cada .on escuchamos a un evento distinto, es preferible a .then . catch ya que nos permite filtrar mejor las respuestas,
+  // y nos aporta flexibilidad, ya que podemos usar los datos de cualquier evento instantes despues de que se emita.
+
   async mint(tokenURI) {
     await this.addNetwork(networks.rinkeby);
     const account = await this.getAccount();
+
     return this.contract.methods
       .safeMint(account, tokenURI)
       .send({
@@ -159,61 +132,96 @@ export class NFT {
         gas: 5500000,
       })
       .on("transactionHash", function (hash) {
-        console.log("METAMASK TRANSACTION ACCEPT", hash);
+        console.log("METAMASK TRANSACTION HASH", hash);
       })
-      .then((receipt) => {
-        console.log("Metamask transaction OK", receipt);
-        return receipt.events.Transfer.returnValues.tokenId;
+      .on("receipt", function (receipt) {
+        return receipt;
       })
-      .catch((error) => {
-        console.log("Metamask transaction FAIL", error);
+      .on("error", function (error) {
         return error;
       });
   }
 
+  // EJECUCION ASINCRONA BASADA EN LAS PROMISE (MAS EN EL LINK)
+  // https://developer.mozilla.org/es/docs/Web/JavaScript/Reference/Global_Objects/Promise/catch),
+  // En el .then capturamos los resultados positivos y en el .catch los errores.
+  //
+  // async mint(tokenURI) {
+  //   await this.addNetwork(networks.rinkeby);
+  //   const account = await this.getAccount();
+
+  //   return this.contract.methods
+  //     .safeMint(account, tokenURI)
+  //     .send({
+  //       from: account,
+  //       gas: 5500000,
+  //     })
+  //     .on("transactionHash", function (hash) {
+  //       console.log("METAMASK TRANSACTION HASH", hash);
+  //     })
+  //     .then((receipt) => {
+  //       console.log(
+  //         "METAMASK TRANSACTION receipt",
+  //         receipt.events.Transfer.returnValues.tokenId
+  //       );
+  //       return receipt.events.Transfer.returnValues.tokenId;
+  //     })
+  //     .catch((error) => {
+  //       console.log("METAMASK TRANSACTION ERROR", error);
+  //       return error;
+  //     });
+  // }
+
   async approve(address, id) {
     await this.addNetwork(networks.rinkeby);
-
     const account = await this.getAccount();
+
     return this.contract.methods
       .approve(address, id)
       .send({
         from: account,
-        // gas: 210000,
       })
       .on("transactionHash", function (hash) {
-        console.log("METAMASK TRANSACTION ACCEPT", hash);
+        console.log("METAMASK TRANSACTION HASH", hash);
       })
       .then((receipt) => {
-        console.log("Metamask transaction OK", receipt);
+        console.log("METAMASK TRANSACTION receipt", receipt);
       })
       .catch((error) => {
-        console.log("Metamask transaction FAIL", error);
+        console.log("METAMASK TRANSACTION ERROR", error);
         return error;
       });
   }
 
-  async onClickConnect(chain) {
-    await test(chain);
-    window.ethereum.request({ method: "eth_requestAccounts" });
+  async tokenURI(id) {
+    await this.addNetwork(networks.rinkeby);
+    console.log(id);
+    try {
+      return await this.contract.methods.tokenURI(id).call();
+    } catch (error) {
+      return error;
+    }
+  }
+
+  async isOwner() {
+    await this.addNetwork(networks.rinkeby);
+    const account = await this.getAccount();
+
+    try {
+      const owner = await this.contract.methods.owner().call();
+      return owner.toUpperCase() === account.toUpperCase();
+    } catch (error) {
+      return error;
+    }
   }
 }
 
-// NFT CONTRACT PROVIDER //
 export class Marketplace {
   constructor(contractData) {
     this.contractData = contractData;
     this.abi = contractData.abi;
     this.address = contractData.address;
     this.contract = new window.web3.eth.Contract(this.abi, this.address);
-  }
-
-  status() {
-    if (window.ethereum === undefined) {
-      return false;
-    } else {
-      return true;
-    }
   }
 
   async addNetwork(network) {
@@ -226,6 +234,7 @@ export class Marketplace {
       rpcList,
       explorerList,
     } = network;
+
     try {
       await window.ethereum.request({
         method: "wallet_switchEthereumChain",
@@ -235,14 +244,14 @@ export class Marketplace {
       if (error.code === 4902) {
         try {
           await window.ethereum.request({
-            method: "wallet_addEthereumChain",
+            method: "wallet_switchEthereumChain",
             params: [
               {
                 chainId: id,
                 chainName: chainName,
                 nativeCurrency: {
                   name: tokenName,
-                  symbol: tokenSymbol,
+                  Symbol: tokenSymbol,
                   decimals: decimals,
                 },
                 rpcUrls: rpcList,
@@ -251,15 +260,16 @@ export class Marketplace {
               },
             ],
           });
-        } catch (addError) {
+        } catch (addErr) {
           throw new Error(`Only ${chainName} should work`);
         }
-      } else throw new Error(`Web3 provider error.`);
+      } else throw new Error(`Web3 provider error`);
     }
   }
 
   async getAccount() {
     await this.addNetwork(networks.rinkeby);
+
     const accounts = await window.ethereum.request({
       method: "eth_requestAccounts",
     });
@@ -268,20 +278,12 @@ export class Marketplace {
   }
 
   async fromWei(amount) {
-    // await test(chain);
     await this.addNetwork(networks.rinkeby);
     return Number(Web3.utils.fromWei(amount, "ether"));
   }
 
-  async toWei(amount) {
-    // await test(chain);
-    await this.addNetwork(networks.rinkeby);
-    return await window.web3.utils.toWei(amount);
-  }
-
   async buyItem(tokenId, amount, address) {
     await this.addNetwork(networks.rinkeby);
-
     const account = await this.getAccount();
     const weiAmount = await window.web3.utils.toWei(`${amount}`, "ether");
 
@@ -295,19 +297,24 @@ export class Marketplace {
       .on("transactionHash", function (hash) {
         console.log("METAMASK TRANSACTION ACCEPT", hash);
       })
-      .then((receipt) => {
-        console.log("Metamask transaction OK", receipt);
-        return receipt.events.ItemBought.returnValues.tokenId;
+      .on("receipt", function (receipt) {
+        return receipt;
       })
-      .catch((error) => {
-        console.log("Metamask transaction FAIL", error);
+      .on("error", function (error) {
         return error;
       });
+    // .then((receipt) => {
+    //   console.log("Metamask transaction OK", receipt);
+    //   return receipt.events.ItemBought.returnValues.tokenId;
+    // })
+    // .catch((error) => {
+    //   console.log("Metamask transaction FAIL", error);
+    //   return error;
+    // });
   }
 
   async listItem(tokenId, amount, address) {
     await this.addNetwork(networks.rinkeby);
-
     const account = await this.getAccount();
     const weiAmount = await window.web3.utils.toWei(`${amount}`, "ether");
 
@@ -320,36 +327,46 @@ export class Marketplace {
       .on("transactionHash", function (hash) {
         console.log("METAMASK TRANSACTION ACCEPT", hash);
       })
-      .then((receipt) => {
-        console.log("Metamask transaction OK", receipt);
-        return receipt.events.ItemListed.returnValues.tokenId;
+      .on("receipt", function (receipt) {
+        return receipt;
       })
-      .catch((error) => {
-        console.log("Metamask transaction FAIL", error);
+      .on("error", function (error) {
         return error;
       });
+
+    // .then((receipt) => {
+    //   console.log("Metamask transaction OK", receipt);
+    //   return receipt.events.ItemListed.returnValues.tokenId;
+    // })
+    // .catch((error) => {
+    //   console.log("Metamask transaction FAIL", error);
+    //   return error;
+    // });
   }
 
   async withdrawProceeds() {
-    console.log('FUNCTION CALLED')
     await this.addNetwork(networks.rinkeby);
     const account = await this.getAccount();
-    console.log("FUNCTION CALLED 2");
 
-    return this.contract.methods.withdrawProceeds().send(
-      {
-        from: account,
-      })
-     .on("transactionHash", function (hash) {
+    return this.contract.methods
+      .withdrawProceeds()
+      .send({ from: account })
+      .on("transactionHash", function (hash) {
         console.log("METAMASK TRANSACTION ACCEPT", hash);
       })
-      .then((receipt) => {
-        console.log("Metamask transaction OK", receipt);
-        // return receipt.events.ItemListed.returnValues.tokenId;
+      .on("receipt", function (receipt) {
+        return receipt;
       })
-      .catch((error) => {
-        console.log("Metamask transaction FAIL", error);
+      .on("error", function (error) {
         return error;
       });
+
+    // .then((receipt) => {
+    //   console.log("Metamask transaction OK", receipt);
+    // })
+    // .catch((error) => {
+    //   console.log("Metamask transaction FAIL", error);
+    //   return error;
+    // });
   }
 }

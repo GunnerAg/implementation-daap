@@ -1,6 +1,5 @@
-/* eslint-disable no-undef */
-const NFT = artifacts.require('../contracts/Nft.sol');
+const NFT = artifacts.require("../contracts/NFT.sol");
 
-module.exports = async function (deployer) {
-  await deployer.deploy(NFT);
+module.exports = function (deployer) {
+  deployer.deploy(NFT);
 };

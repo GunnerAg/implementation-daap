@@ -1,56 +1,53 @@
-import { TokenService } from '../../services/token.service'
-import { NextFunction, Router } from 'express'
-import Container from 'typedi'
+import { TokenService } from './../../services/token.service';
+import { Router, NextFunction } from 'express';
 import { isValidTokenCreate } from '../middlewares/validation.middleware'
-const contractJson = require("../../smart-contracts/build/Nft.json");
+import Container from 'typedi';
+import { nftScData } from '../../smart-contracts'
 
 const route = Router()
 
 export default (app: Router): void => {
   app.use(route)
 
-  app.post('/create_nft', isValidTokenCreate, async (req: any, res, next: NextFunction) => {
+  app.post('/create_nft', isValidTokenCreate, 
+  async(req:any, res:any, next:NextFunction)=>{
     try {
+      const { name, imgUrl, rarity, id } = req.body;
       const tokenService = Container.get(TokenService)
-      const { name, imgURL, rarity, id } = req.body;
-      console.log('MINT', name, imgURL, rarity, id)
-      const result = await tokenService.CreateToken(name, imgURL, rarity, id)
-      console.log('MINTED', result)
+      const result = await tokenService.CreateToken(name, imgUrl, rarity, id)
 
       if (!result) {
-        return next({ status: 400, message: 'La orden de venta no se ha creado correctamente' })
+        return next({ status: 400, message: 'El token no se ha añadido correctamente' })
       }
       return res.json({ result }).status(200)
-    } catch (e) {
-      console.error('🔥 error: %o', e)
-      return next(e)
+    } catch (error) {
+      console.error('🔥Error', error);
+      return next(error)
     }
   })
 
-  app.get('/all', async (req: any, res, next: NextFunction) => {
+  app.get('/all', async (req: any, res: any, next: NextFunction) => {
     try {
       const tokenService = Container.get(TokenService)
       const result = await tokenService.GetAllTokens()
+
       if (!result) {
         return next({ status: 400, message: 'Error al obtener datos del marketplace' })
       }
       return res.json({ result }).status(200)
-    } catch (e) {
-      console.error('🔥 error: %o', e)
-      return next(e)
+    } catch (error) {
+      console.error('🔥Error', error);
+      return next(error)
     }
   })
 
   app.get('/token_contract', async (req: any, res, next: NextFunction) => {
     try {
-      const networkId = Object.keys(contractJson.networks)[0];
-      return res.json({
-        abi: contractJson.abi,
-        address: contractJson.networks[networkId].address
-      }).status(200)
-    } catch (e) {
-      console.error('🔥 error: %o', e)
-      return next(e)
+      return res.json(nftScData).status(200)
+      
+    } catch (error) {
+      console.error('🔥Error', error);
+      return next(error)
     }
   })
 }
